@@ -3,12 +3,12 @@ from dataclasses import dataclass
 import re
 from typing import Literal
 
-__all__ = ("Url", "DataURL", "url_to_data_url")
+__all__ = ("Url", "DataUrl")
 
 QueryValueType = str | list[str]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Url:
     scheme: str
     username: str | None
@@ -91,7 +91,7 @@ class Url:
 
 
 @dataclass
-class HttpURL:
+class HttpUrl:
     scheme: Literal["http", "https"]
     username: str | None
     password: str | None
@@ -103,13 +103,13 @@ class HttpURL:
 
 
 @dataclass
-class FileURL:
+class FileUrl:
     host: str
     path: str | None
 
 
 @dataclass
-class DataURL:
+class DataUrl:
     """
     Data URI scheme parser according to RFC 2397.
 
@@ -127,7 +127,7 @@ class DataURL:
     data: str
 
     @staticmethod
-    def parse(path: str) -> "DataURL":
+    def parse(path: str) -> "DataUrl":
         """
         Parse a data URI path (without the 'data:' scheme prefix).
 
@@ -180,7 +180,7 @@ class DataURL:
         if mediatype == "text/plain" and "charset" not in parameters:
             parameters["charset"] = "US-ASCII"
 
-        return DataURL(
+        return DataUrl(
             mediatype=mediatype,
             parameters=parameters,
             is_base64=is_base64,
@@ -200,15 +200,15 @@ class DataURL:
             return self.data
 
 
-ConcreteUrl = FileURL | DataURL | HttpURL
+ConcreteUrl = FileUrl | DataUrl | HttpUrl
 
 
 def to_concrete(url: Url) -> ConcreteUrl:
     match url.scheme:
         case "data":
-            return DataURL.parse(url.path or "")
+            return DataUrl.parse(url.path or "")
         case "http" | "https":
-            return HttpURL(
+            return HttpUrl(
                 scheme=url.scheme,
                 username=url.username,
                 password=url.password,
@@ -219,7 +219,7 @@ def to_concrete(url: Url) -> ConcreteUrl:
                 fragment=url.fragment,
             )
         case "file":
-            return FileURL(
+            return FileUrl(
                 host=url.host or "localhost",
                 path=url.path,
             )
