@@ -2,7 +2,7 @@ from .http.connection import HttpConnection
 from .http.request import HttpRequest
 from .https.connection import HttpsConnection
 
-from browser.url import URL, ConcreteUrl, DataURL, FileURL, HttpURL, to_concrete
+from browser.url import Url, ConcreteUrl, DataURL, FileURL, HttpURL, to_concrete
 
 
 def create_connection(url: HttpURL) -> HttpConnection | HttpsConnection:
@@ -29,7 +29,7 @@ def http_handler(url: HttpURL) -> str:
     response = connection.send(request)
 
     if 300 <= response.status_code < 400:
-        redirect_url = to_concrete(URL.parse(response.headers["location"]))
+        redirect_url = to_concrete(Url.parse(response.headers["location"]))
         return handle_url(redirect_url)
     else:
         return response.body

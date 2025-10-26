@@ -1,14 +1,14 @@
-from browser.url import URL, ConcreteUrl, to_concrete
+from browser.url import Url, ConcreteUrl, to_concrete
 from browser.protocols import handle_url
 
 
 class Tab:
-    def __init__(self, url: URL, body: str = ""):
-        self.url: URL = url
+    def __init__(self, url: Url, body: str = ""):
+        self.url: Url = url
         self._body: str = body
 
     @staticmethod
-    def open(url: URL) -> "Tab":
+    def open(url: Url) -> "Tab":
         concrete_url = to_concrete(url)
         body = handle_url(concrete_url)
 

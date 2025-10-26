@@ -3,13 +3,13 @@ from dataclasses import dataclass
 import re
 from typing import Literal
 
-__all__ = ("URL", "DataURL", "url_to_data_url")
+__all__ = ("Url", "DataURL", "url_to_data_url")
 
 QueryValueType = str | list[str]
 
 
 @dataclass
-class URL:
+class Url:
     scheme: str
     username: str | None
     password: str | None
@@ -21,7 +21,7 @@ class URL:
     fragment: str | None
 
     @staticmethod
-    def parse(s: str) -> "URL":
+    def parse(s: str) -> "Url":
         # RFC 3986 compliant URL regex pattern
         # URI = scheme ":" ["//" authority] path ["?" query] ["#" fragment]
         # authority = [userinfo "@"] host [":" port]
@@ -78,7 +78,7 @@ class URL:
         query_value = match.group("query")
         fragment_value = match.group("fragment")
 
-        return URL(
+        return Url(
             scheme=scheme_value,
             username=username_value,
             password=password_value,
@@ -203,7 +203,7 @@ class DataURL:
 ConcreteUrl = FileURL | DataURL | HttpURL
 
 
-def to_concrete(url: URL) -> ConcreteUrl:
+def to_concrete(url: Url) -> ConcreteUrl:
     match url.scheme:
         case "data":
             return DataURL.parse(url.path or "")

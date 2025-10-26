@@ -1,7 +1,7 @@
 from typing import Annotated
 import typer
 
-from browser.url import URL
+from browser.url import Url
 from browser.tab import Tab
 
 app = typer.Typer()
@@ -9,7 +9,7 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    url: Annotated[URL, typer.Argument(help="URL to open.", parser=URL.parse)],
+    url: Annotated[Url, typer.Argument(help="URL to open.", parser=Url.parse)],
 ):
     tab = Tab.open(url)
     print(tab.body)
