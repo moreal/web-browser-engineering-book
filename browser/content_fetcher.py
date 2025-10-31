@@ -1,15 +1,13 @@
 from dataclasses import dataclass
 
 from browser.handler import RedirectInfo
-from browser.handler_factory import GlobalHandlerFactory, HandlerFactory
-from .url import Url, to_concrete
-from .content import Content
+from browser.handler_factory import get_handler
+from browser.url import Url
+from browser.content import Content
 
 
 @dataclass(frozen=True)
 class ContentFetcher:
-    handler_factory: HandlerFactory = GlobalHandlerFactory
-
     def fetch(self, url: Url) -> Content:
         return self._handle(url)
 
@@ -17,16 +15,14 @@ class ContentFetcher:
         if max_redirects <= 0:
             raise ValueError("Max redirects exceeded")
 
-        concrete_url = to_concrete(url)
         result = None
         while True:
-            handler = self.handler_factory.get(concrete_url)
-            result = handler.fetch(concrete_url)
+            if (handler := get_handler(url.scheme)) is None:
+                raise ValueError(f"Cannot handle {url}")
+
+            result = handler.fetch(url)
             match result:
                 case RedirectInfo():
                     return self._handle(result.url, max_redirects - 1)
                 case _:
                     return result
-
-
-GlobalContentFetcher = ContentFetcher()

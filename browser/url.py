@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import re
 from typing import Literal
 
-__all__ = ("Url", "DataUrl")
+__all__ = ("Url", "DataUrlData")
 
 QueryValueType = str | list[str]
 
@@ -124,7 +124,12 @@ class FileUrl:
 
 
 @dataclass(frozen=True)
-class DataUrl:
+class ViewSourceUrl:
+    url: Url
+
+
+@dataclass(frozen=True)
+class DataUrlData:
     """
     Data URI scheme parser according to RFC 2397.
 
@@ -142,7 +147,7 @@ class DataUrl:
     data: str
 
     @staticmethod
-    def parse(path: str) -> "DataUrl":
+    def parse(path: str) -> "DataUrlData":
         """
         Parse a data URI path (without the 'data:' scheme prefix).
 
@@ -195,7 +200,7 @@ class DataUrl:
         if mediatype == "text/plain" and "charset" not in parameters:
             parameters["charset"] = "US-ASCII"
 
-        return DataUrl(
+        return DataUrlData(
             mediatype=mediatype,
             parameters=parameters,
             is_base64=is_base64,
@@ -213,32 +218,3 @@ class DataUrl:
             return data
         else:
             return self.data
-
-
-ConcreteUrl = FileUrl | DataUrl | HttpFamilyUrl
-
-
-def to_concrete(url: Url) -> ConcreteUrl:
-    match url.scheme:
-        case "data":
-            return DataUrl.parse(url.path or "")
-        case "http" | "https":
-            if url.host is None:
-                raise ValueError("'host' is required for HTTP URLs")
-            return HttpFamilyUrl(
-                scheme=url.scheme,
-                username=url.username,
-                password=url.password,
-                host=url.host,
-                port=url.port,
-                path=url.path,
-                query=url.query,
-                fragment=url.fragment,
-            )
-        case "file":
-            return FileUrl(
-                host=url.host or "localhost",
-                path=url.path,
-            )
-        case _:
-            raise ValueError(f"Unsupported scheme: {url.scheme}")

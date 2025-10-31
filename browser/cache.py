@@ -31,6 +31,3 @@ class MemoryCache(HttpCache):
 
     def set(self, url: HttpFamilyUrl, response: HttpResponse, expires: int) -> None:
         self._cache[url] = (response, expires)
-
-
-GlobalMemoryCache = MemoryCache()

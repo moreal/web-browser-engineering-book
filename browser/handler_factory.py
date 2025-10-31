@@ -1,30 +1,21 @@
-from dataclasses import dataclass
-from typing import overload
-from browser.connection_factory import ConnectionFactory, GlobalConnectionFactory
+from browser.handler import UrlHandler
 from browser.protocols.data.handler import DataUrlHandler
 from browser.protocols.file.handler import FileUrlHandler
+from browser.protocols.view_source import ViewSourceUrlHandler
 from browser.protocols.http.handler import HttpHandler
-from browser.url import ConcreteUrl, DataUrl, FileUrl, HttpFamilyUrl
+from browser.singleton import GlobalContentFetcher
+
+SCHEME_TO_HANDLER = {
+    "http": HttpHandler(),
+    "https": HttpHandler(),
+    "file": FileUrlHandler(),
+    "data": DataUrlHandler(),
+    "view-source": ViewSourceUrlHandler(GlobalContentFetcher),
+}
 
 
-@dataclass(frozen=True)
-class HandlerFactory:
-    connection_factory: ConnectionFactory = GlobalConnectionFactory
-
-    @overload
-    def get(self, url: HttpFamilyUrl) -> HttpHandler: ...
-    @overload
-    def get(self, url: FileUrl) -> FileUrlHandler: ...
-    @overload
-    def get(self, url: DataUrl) -> DataUrlHandler: ...
-    def get(self, url: ConcreteUrl) -> HttpHandler | FileUrlHandler | DataUrlHandler:
-        match url:
-            case HttpFamilyUrl():
-                return HttpHandler(self.connection_factory)
-            case FileUrl():
-                return FileUrlHandler()
-            case DataUrl():
-                return DataUrlHandler()
-
-
-GlobalHandlerFactory = HandlerFactory()
+def get_handler(scheme: str) -> UrlHandler | None:
+    handler = SCHEME_TO_HANDLER.get(scheme)
+    if handler is None:
+        raise ValueError(f"Unsupported scheme: {scheme}")
+    return handler

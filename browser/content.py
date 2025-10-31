@@ -11,7 +11,12 @@ __all__ = (
 
 
 type Content = (
-    ImageContent | UnknownContent | UnhandledContent | PlainTextContent | HtmlContent
+    ImageContent
+    | UnknownContent
+    | UnhandledContent
+    | PlainTextContent
+    | HtmlContent
+    | ViewSource
 )
 
 
@@ -43,6 +48,11 @@ class PlainTextContent:
 class HtmlContent:
     data: bytes
     media_type: Literal["text/html"] = "text/html"
+
+
+@dataclass(frozen=True)
+class ViewSource:
+    content: Content
 
 
 def recognize_content(media_type: str, data: bytes) -> Content:

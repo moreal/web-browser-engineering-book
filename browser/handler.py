@@ -10,7 +10,7 @@ class RedirectInfo:
     url: Url
 
 
-class UrlHandler[TUrl](abc.ABC):
+class UrlHandler(abc.ABC):
     @abc.abstractmethod
-    def fetch(self, url: TUrl) -> Content | RedirectInfo:
+    def fetch(self, url: Url) -> Content | RedirectInfo:
         pass

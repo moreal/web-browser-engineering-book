@@ -1,7 +1,7 @@
 import abc
 from typing import override
 
-from .content import Content, TextContent, ImageContent
+from .content import Content, HtmlContent, TextContent, ImageContent
 
 
 class Renderer[Output = str](abc.ABC):
@@ -20,7 +20,7 @@ class ConsoleRenderer(Renderer[None]):
     @override
     def render(self, content: Content) -> None:
         match content:
-            case TextContent():
+            case HtmlContent():
                 print(content.text)
             case ImageContent():
                 print("image content is not supported yet.")
