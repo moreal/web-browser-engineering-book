@@ -1,7 +1,8 @@
 from typing import Literal, Optional
+from browser.content_fetcher import ContentFetcher
 from browser.renderer import Renderer
 from browser.tab import Tab
-from .cache import Cache
+from .cache import HttpCache
 from .url import Url
 
 from dataclasses import dataclass
@@ -13,13 +14,13 @@ class BrowserOptions:
 
 
 class Browser:
-    cache: Cache
+    cache: HttpCache
     renderer: Renderer
-    content_fetcher: content_fetcher
+    content_fetcher: ContentFetcher
 
     def __init__(
         self,
-        cache: Cache,
+        cache: HttpCache,
         renderer: Renderer,
         browser_options: Optional[BrowserOptions] = None,
     ) -> None:

@@ -1,19 +1,16 @@
-from browser.url import Url, ConcreteUrl, to_concrete
-from browser.protocols import handle_url
+from dataclasses import dataclass
+from browser.content import Content
+from browser.content_fetcher import GlobalContentFetcher
+from browser.url import Url
 
 
+@dataclass(frozen=True)
 class Tab:
-    def __init__(self, url: Url, body: str = ""):
-        self.url: Url = url
-        self._body: str = body
+    url: Url
+    content: Content
 
     @staticmethod
     def open(url: Url) -> "Tab":
-        concrete_url = to_concrete(url)
-        body = handle_url(concrete_url)
+        content = GlobalContentFetcher.fetch(url)
 
-        return Tab(url=url, body=body)
-
-    @property
-    def body(self) -> str:
-        return self._body
+        return Tab(url=url, content=content)

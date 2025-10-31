@@ -1,5 +1,5 @@
 import pytest
-from browser.url import Url, DataURL
+from browser.url import Url, DataUrl
 
 
 class TestHTTPURLParsing:
@@ -567,7 +567,7 @@ class TestDataURLParsing:
 
     def test_minimal_data_uri(self):
         """Test minimal data URI: data:,"""
-        data_url = DataURL.parse(",")
+        data_url = DataUrl.parse(",")
         assert data_url.mediatype == "text/plain"
         assert data_url.parameters == {"charset": "US-ASCII"}
         assert data_url.is_base64 is False
@@ -575,7 +575,7 @@ class TestDataURLParsing:
 
     def test_empty_path_defaults_to_minimal(self):
         """Test empty path defaults to minimal data URI."""
-        data_url = DataURL.parse("")
+        data_url = DataUrl.parse("")
         assert data_url.mediatype == "text/plain"
         assert data_url.parameters == {"charset": "US-ASCII"}
         assert data_url.is_base64 is False
@@ -583,7 +583,7 @@ class TestDataURLParsing:
 
     def test_simple_text(self):
         """Test simple text data URI."""
-        data_url = DataURL.parse("text/plain,hello")
+        data_url = DataUrl.parse("text/plain,hello")
         assert data_url.mediatype == "text/plain"
         assert data_url.parameters == {"charset": "US-ASCII"}
         assert data_url.is_base64 is False
@@ -591,7 +591,7 @@ class TestDataURLParsing:
 
     def test_text_with_charset(self):
         """Test data URI with charset parameter."""
-        data_url = DataURL.parse("text/plain;charset=UTF-8,Hello World")
+        data_url = DataUrl.parse("text/plain;charset=UTF-8,Hello World")
         assert data_url.mediatype == "text/plain"
         assert data_url.parameters == {"charset": "UTF-8"}
         assert data_url.is_base64 is False
@@ -599,7 +599,7 @@ class TestDataURLParsing:
 
     def test_base64_encoded(self):
         """Test base64 encoded data URI."""
-        data_url = DataURL.parse("image/png;base64,iVBORw0KGgo=")
+        data_url = DataUrl.parse("image/png;base64,iVBORw0KGgo=")
         assert data_url.mediatype == "image/png"
         assert data_url.parameters == {}
         assert data_url.is_base64 is True
@@ -607,7 +607,7 @@ class TestDataURLParsing:
 
     def test_base64_only_with_default_mediatype(self):
         """Test base64 with default mediatype."""
-        data_url = DataURL.parse(";base64,R0lGODdh")
+        data_url = DataUrl.parse(";base64,R0lGODdh")
         assert data_url.mediatype == "text/plain"
         assert data_url.parameters == {"charset": "US-ASCII"}
         assert data_url.is_base64 is True
@@ -615,7 +615,7 @@ class TestDataURLParsing:
 
     def test_html_content(self):
         """Test HTML content in data URI."""
-        data_url = DataURL.parse("text/html,<h1>Hello</h1>")
+        data_url = DataUrl.parse("text/html,<h1>Hello</h1>")
         assert data_url.mediatype == "text/html"
         assert data_url.parameters == {}
         assert data_url.is_base64 is False
@@ -623,7 +623,7 @@ class TestDataURLParsing:
 
     def test_svg_with_utf8(self):
         """Test SVG with utf8 encoding."""
-        data_url = DataURL.parse(
+        data_url = DataUrl.parse(
             "image/svg+xml;charset=utf-8,<svg width='10' height='10'></svg>"
         )
         assert data_url.mediatype == "image/svg+xml"
@@ -633,7 +633,7 @@ class TestDataURLParsing:
 
     def test_multiple_parameters(self):
         """Test data URI with multiple parameters."""
-        data_url = DataURL.parse(
+        data_url = DataUrl.parse(
             "text/plain;charset=UTF-8;page=21,the%20data:1234,5678"
         )
         assert data_url.mediatype == "text/plain"
@@ -643,7 +643,7 @@ class TestDataURLParsing:
 
     def test_mediatype_with_vendor_prefix(self):
         """Test mediatype with vendor prefix."""
-        data_url = DataURL.parse("text/vnd-example+xyz;foo=bar;base64,R0lGODdh")
+        data_url = DataUrl.parse("text/vnd-example+xyz;foo=bar;base64,R0lGODdh")
         assert data_url.mediatype == "text/vnd-example+xyz"
         assert data_url.parameters == {"foo": "bar"}
         assert data_url.is_base64 is True
@@ -651,7 +651,7 @@ class TestDataURLParsing:
 
     def test_jpeg_image(self):
         """Test JPEG image data URI."""
-        data_url = DataURL.parse("image/jpeg;base64,/9j/4AAQSkZJRg==")
+        data_url = DataUrl.parse("image/jpeg;base64,/9j/4AAQSkZJRg==")
         assert data_url.mediatype == "image/jpeg"
         assert data_url.parameters == {}
         assert data_url.is_base64 is True
@@ -659,7 +659,7 @@ class TestDataURLParsing:
 
     def test_data_with_special_characters(self):
         """Test data containing special characters."""
-        data_url = DataURL.parse("text/plain,Hello:World;Test=Value")
+        data_url = DataUrl.parse("text/plain,Hello:World;Test=Value")
         assert data_url.mediatype == "text/plain"
         assert data_url.is_base64 is False
         assert data_url.data == "Hello:World;Test=Value"
@@ -667,10 +667,10 @@ class TestDataURLParsing:
     def test_missing_comma_raises_error(self):
         """Test that missing comma separator raises ValueError."""
         with pytest.raises(ValueError, match="missing comma separator"):
-            DataURL.parse("text/plain")
+            DataUrl.parse("text/plain")
 
     def test_case_insensitive_base64(self):
         """Test that 'base64' is case-insensitive."""
-        data_url = DataURL.parse("text/plain;BASE64,SGVsbG8=")
+        data_url = DataUrl.parse("text/plain;BASE64,SGVsbG8=")
         assert data_url.is_base64 is True
         assert data_url.data == "SGVsbG8="

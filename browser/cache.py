@@ -1,14 +1,36 @@
-import abc
+import time
+from typing import Final, Protocol
 
-from .url import Url
-from .content import Content
+from browser.protocols.http.response import HttpResponse
+
+from .url import HttpFamilyUrl
 
 
-class Cache(abc.ABC):
-    @abc.abstractmethod
-    def get(self, url: Url) -> Content:
-        raise NotImplementedError()
+class HttpCache(Protocol):
+    """
+    Protocol to cache only HTTP/S responses (not other schemes like file:, data:).
+    """
 
-    @abc.abstractmethod
-    def set(self, url: Url, content: Content):
-        raise NotImplementedError()
+    def get(self, url: HttpFamilyUrl) -> HttpResponse | None: ...
+
+    def set(self, url: HttpFamilyUrl, response: HttpResponse, expires: int) -> None: ...
+
+
+class MemoryCache(HttpCache):
+    def __init__(self):
+        self._cache: Final = dict[HttpFamilyUrl, tuple[HttpResponse, int]]()
+
+    def get(self, url: HttpFamilyUrl) -> HttpResponse | None:
+        if (cached := self._cache.get(url)) is None:
+            return None
+        response, expire_at = cached
+        if expire_at < time.time():
+            _ = self._cache.pop(url)
+            return None
+        return response
+
+    def set(self, url: HttpFamilyUrl, response: HttpResponse, expires: int) -> None:
+        self._cache[url] = (response, expires)
+
+
+GlobalMemoryCache = MemoryCache()

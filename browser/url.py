@@ -89,26 +89,41 @@ class Url:
             fragment=fragment_value,
         )
 
+    def resolve(self, relative_url: str) -> Url:
+        return self
 
-@dataclass
-class HttpUrl:
+
+@dataclass(frozen=True)
+class HttpFamilyUrl:
     scheme: Literal["http", "https"]
     username: str | None
     password: str | None
-    host: str | None
+    host: str
     port: int | None
     path: str | None
     query: str | None
     fragment: str | None
 
+    def to_url(self) -> Url:
+        return Url(
+            scheme=self.scheme,
+            username=self.username,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            path=self.path,
+            query=self.query,
+            fragment=self.fragment,
+        )
 
-@dataclass
+
+@dataclass(frozen=True)
 class FileUrl:
     host: str
     path: str | None
 
 
-@dataclass
+@dataclass(frozen=True)
 class DataUrl:
     """
     Data URI scheme parser according to RFC 2397.
@@ -187,7 +202,7 @@ class DataUrl:
             data=data,
         )
 
-    def get_data(self):
+    def get_data(self) -> str | bytes:
         if self.is_base64:
             data = base64.b64decode(self.data)
 
@@ -200,7 +215,7 @@ class DataUrl:
             return self.data
 
 
-ConcreteUrl = FileUrl | DataUrl | HttpUrl
+ConcreteUrl = FileUrl | DataUrl | HttpFamilyUrl
 
 
 def to_concrete(url: Url) -> ConcreteUrl:
@@ -208,7 +223,9 @@ def to_concrete(url: Url) -> ConcreteUrl:
         case "data":
             return DataUrl.parse(url.path or "")
         case "http" | "https":
-            return HttpUrl(
+            if url.host is None:
+                raise ValueError("'host' is required for HTTP URLs")
+            return HttpFamilyUrl(
                 scheme=url.scheme,
                 username=url.username,
                 password=url.password,

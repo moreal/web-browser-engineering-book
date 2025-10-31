@@ -11,6 +11,6 @@ class HttpResponse:
     status_code: int
     status_message: str
     headers: dict[str, str]
-    body: str
+    body: bytes
 
     request: HttpRequest

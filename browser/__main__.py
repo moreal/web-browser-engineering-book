@@ -12,7 +12,6 @@ def main(
     url: Annotated[Url, typer.Argument(help="URL to open.", parser=Url.parse)],
 ):
     tab = Tab.open(url)
-    print(tab.body)
 
 
 if __name__ == "__main__":

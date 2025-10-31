@@ -1,15 +1,32 @@
-from .protocols.connection_factory import ConnectionFactory
-from .cache import Cache
-from .url import Url
+from dataclasses import dataclass
+
+from browser.handler import RedirectInfo
+from browser.handler_factory import GlobalHandlerFactory, HandlerFactory
+from .url import Url, to_concrete
 from .content import Content
 
 
+@dataclass(frozen=True)
 class ContentFetcher:
-    def __init__(self, cache: Cache, connection_factory: ConnectionFactory):
-        self.cache = cache
-        self.connection_factory = connection_factory
+    handler_factory: HandlerFactory = GlobalHandlerFactory
 
     def fetch(self, url: Url) -> Content:
-        connection = self.connection_factory.get(url)
-        response = connection.request("GET", url)
-        return Content(response.status_code, response.headers, response.body)
+        return self._handle(url)
+
+    def _handle(self, url: Url, max_redirects: int = 20) -> Content:
+        if max_redirects <= 0:
+            raise ValueError("Max redirects exceeded")
+
+        concrete_url = to_concrete(url)
+        result = None
+        while True:
+            handler = self.handler_factory.get(concrete_url)
+            result = handler.fetch(concrete_url)
+            match result:
+                case RedirectInfo():
+                    return self._handle(result.url, max_redirects - 1)
+                case _:
+                    return result
+
+
+GlobalContentFetcher = ContentFetcher()
