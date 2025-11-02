@@ -49,21 +49,23 @@ class Browser:
         self.window.bind("<Configure>", self._configure)
 
     def _scrolldown(self, event):
-        self._update_scroll(self.scroll + 100)
+        self._update_scroll(100)
 
     def _scrollup(self, event):
-        self._update_scroll(max(self.scroll - 100, 0))
+        self._update_scroll(-100)
 
     def _mousewheel(self, event: tkinter.Event):
-        self._update_scroll(max(self.scroll - event.delta, 0))
+        # FIXME: care cross platform (Windows, macOS, Linux)
+        self._update_scroll(event.delta)
 
     def _configure(self, event: tkinter.Event):
         self.height = event.height
         self.width = event.width
         self._update_display_list()
 
-    def _update_scroll(self, new_scroll: int):
-        self.scroll = new_scroll
+    def _update_scroll(self, delta: int):
+        max_height = _get_max_height(self._current_display_list, self.VSTEP)
+        self.scroll = max(min(self.scroll + delta, max_height - self.height), 0)
         self._update_display_list()
 
     def open(self, url: Url) -> None:
@@ -115,3 +117,7 @@ class Browser:
                 return display_list
             case _:
                 pass
+
+
+def _get_max_height(display_list: DisplayList, vstep: int) -> int:
+    return max(map(lambda x: x[0][1], display_list)) + vstep
