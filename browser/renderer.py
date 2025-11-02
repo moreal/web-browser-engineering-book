@@ -1,4 +1,5 @@
 import abc
+import tkinter
 from typing import override
 
 from .content import Content, HtmlContent, ImageContent, PlainTextContent, ViewSource
@@ -21,7 +22,7 @@ class ConsoleRenderer(Renderer[None]):
     def render(self, content: Content) -> None:
         match content:
             case HtmlContent():
-                _render_html_console(content)
+                _render_html_to_text(content)
             case ViewSource():
                 print("In view-source mode:")
                 print(_get_raw(content.content))
@@ -45,9 +46,9 @@ def _get_raw(content: Content) -> str:
             return ""
 
 
-def _render_html_console(content: HtmlContent) -> None:
+def _render_html_to_text(content: HtmlContent) -> str:
     import re
 
     data = content.data.decode("utf-8")  # FIXME: get charset
     data = re.sub(r"<[^>]*>", "", data)  # Remove XML tags
-    print(data.replace("&lt;", "<").replace("&gt;", ">"))
+    return data.replace("&lt;", "<").replace("&gt;", ">")
