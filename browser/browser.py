@@ -1,4 +1,3 @@
-import enum
 from typing import Literal
 from browser.content import Content, HtmlContent
 from browser.content_fetcher import fetch_content
@@ -27,13 +26,13 @@ class Browser:
         height: int = 800,
         width: int = 600,
     ) -> None:
-        self.HEIGHT = height
-        self.WIDTH = width
-        self.VSTEP, self.HSTEP = 13, 18
+        self.height = height
+        self.width = width
+        self.HSTEP, self.VSTEP = 13, 18
 
         self.window = tkinter.Tk()
-        self.canvas = tkinter.Canvas(self.window, height=self.HEIGHT, width=self.WIDTH)
-        self.canvas.pack()
+        self.canvas = tkinter.Canvas(self.window, height=self.height, width=self.width)
+        self.canvas.pack(fill=tkinter.BOTH, expand=True)
 
         self.scroll = 0
 
@@ -47,6 +46,7 @@ class Browser:
         self.window.bind("<MouseWheel>", self._mousewheel)
         self.window.bind("<Button-4>", self._scrollup)
         self.window.bind("<Button-5>", self._scrollup)
+        self.window.bind("<Configure>", self._configure)
 
     def _scrolldown(self, event):
         self._update_scroll(self.scroll + 100)
@@ -56,6 +56,11 @@ class Browser:
 
     def _mousewheel(self, event: tkinter.Event):
         self._update_scroll(max(self.scroll - event.delta, 0))
+
+    def _configure(self, event: tkinter.Event):
+        self.height = event.height
+        self.width = event.width
+        self._update_display_list()
 
     def _update_scroll(self, new_scroll: int):
         self.scroll = new_scroll
@@ -83,7 +88,7 @@ class Browser:
     def _display(self, display_list: DisplayList):
         self.canvas.delete("all")
         for (x, y), element in display_list:
-            if y > self.scroll + self.HEIGHT or y + self.VSTEP < self.scroll:
+            if y > self.scroll + self.height or y + self.VSTEP < self.scroll:
                 continue
             match element:
                 case ("text", text):
@@ -98,15 +103,14 @@ class Browser:
             case HtmlContent():
                 text = _render_html_to_text(content)
                 display_list: DisplayList = []
-                HSTEP, VSTEP = 13, 18
-                cursor_x, cursor_y = HSTEP, VSTEP
+                cursor_x, cursor_y = self.HSTEP, self.VSTEP
                 for c in text:
                     display_list.append(((cursor_x, cursor_y), ("text", c)))
-                    cursor_x += HSTEP
+                    cursor_x += self.HSTEP
 
-                    if cursor_x >= self.WIDTH - HSTEP:
-                        cursor_x = HSTEP
-                        cursor_y += VSTEP
+                    if cursor_x >= self.width - self.HSTEP:
+                        cursor_x = self.HSTEP
+                        cursor_y += self.VSTEP
 
                 return display_list
             case _:

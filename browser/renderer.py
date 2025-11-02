@@ -46,9 +46,15 @@ def _get_raw(content: Content) -> str:
             return ""
 
 
+render_cache: dict[str, str] = {}
+
+
 def _render_html_to_text(content: HtmlContent) -> str:
     import re
 
     data = content.data.decode("utf-8")  # FIXME: get charset
-    data = re.sub(r"<[^>]*>", "", data)  # Remove XML tags
-    return data.replace("&lt;", "<").replace("&gt;", ">")
+    if data not in render_cache:
+        render_cache[data] = (
+            re.sub(r"<[^>]*>", "", data).replace("&lt;", "<").replace("&gt;", ">")
+        )
+    return render_cache[data]
