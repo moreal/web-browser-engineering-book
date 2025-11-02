@@ -4,8 +4,9 @@ import os.path
 from dataclasses import dataclass
 from typing import cast, override
 
-from browser.cache import GlobalMemoryCache, HttpCache
-from browser.connection_factory import ConnectionFactory, GlobalConnectionFactory
+from browser.cache import HttpCache
+from browser.protocols.http.media_type import InvalidMediaType
+from browser.singleton import GlobalMemoryCache
 from browser.content import (
     Content,
     UnknownContent,
@@ -19,6 +20,7 @@ from browser.protocols.http.headers.cache_control.response import (
 from browser.protocols.http.headers.cache_control import response as cache_control_token
 from browser.protocols.http.request import HttpRequest
 from browser.protocols.http.response import HttpResponse
+from browser.connection import request_http
 from browser.url import HttpFamilyUrl, Url
 
 import time
@@ -33,23 +35,27 @@ def get_current_epoch():
     return int(time.time())
 
 
+HTTP_KEEP_ALIVE_FLAG: bool = True
+
+
 @dataclass(frozen=True)
-class HttpHandler(UrlHandler[HttpFamilyUrl]):
-    connection_factory: ConnectionFactory = GlobalConnectionFactory
+class HttpHandler(UrlHandler):
     cache: HttpCache = GlobalMemoryCache
 
     @override
-    def fetch(self, url: HttpFamilyUrl):
-        connection = self.connection_factory.get(url)
+    def fetch(self, url: Url):
+        http_family_url = HttpFamilyUrl.from_url(url)
         request = HttpRequest(
             method="GET",
             path=url.path or "/",
             headers={
-                "Host": url.host,
+                "Host": http_family_url.host,
+                "Connection": "keep-alive" if HTTP_KEEP_ALIVE_FLAG else "close",
+                "Accept-Encoding": "gzip",
             },
             version="1.1",
         )
-        response = connection.request(request)
+        response = request_http(http_family_url, request)
         if (cache_control := response.headers.get("cache-control")) is not None:
             response_cache_control_tokens = parse_response_cache_control(cache_control)
             max_age_token = cast(
@@ -71,7 +77,7 @@ class HttpHandler(UrlHandler[HttpFamilyUrl]):
                     response_cache_control_tokens,
                 )
             ):
-                self.cache.set(url, response, max_age)
+                self.cache.set(http_family_url, response, max_age)
 
         if (
             300 <= response.status_code < 400
@@ -82,15 +88,17 @@ class HttpHandler(UrlHandler[HttpFamilyUrl]):
                 return RedirectInfo(url=redirect_url)
             else:
                 # FIXME: resolve relative path via URL.resolve
-                next_path = os.path.join(url.path, location_header_value)
-                redirect_url = dataclasses.replace(url, path=next_path)
+                next_path = os.path.join(
+                    http_family_url.path or "/", location_header_value
+                )
+                redirect_url = dataclasses.replace(http_family_url, path=next_path)
                 return RedirectInfo(url=redirect_url.to_url())
         return recognize_response(response)
 
 
 def recognize_response(response: HttpResponse) -> Content:
-    content_type = response.headers.get("content-type")
-    if content_type is None:
+    content_type = response.headers.content_type()
+    if content_type is None or isinstance(content_type, InvalidMediaType):
         return UnknownContent(media_type=None, bytes=response.body)
 
     return recognize_content(content_type, response.body)

@@ -1,7 +1,15 @@
+from __future__ import annotations
+
 import base64
 from dataclasses import dataclass
 import re
-from typing import Literal
+from typing import Literal, cast
+
+from browser.protocols.http.media_type import (
+    InvalidMediaType,
+    MediaType,
+    parse_media_type,
+)
 
 __all__ = ("Url", "DataUrlData")
 
@@ -116,6 +124,25 @@ class HttpFamilyUrl:
             fragment=self.fragment,
         )
 
+    @classmethod
+    def from_url(cls, url: Url) -> HttpFamilyUrl:
+        if not (url.scheme == "http" or url.scheme == "https"):
+            raise ValueError(f"Unexpected scheme: {url.scheme}")
+
+        if url.host is None:
+            raise ValueError("Host is required for HTTP URL.")
+
+        return cls(
+            scheme=url.scheme,
+            username=url.username,
+            password=url.password,
+            host=url.host,
+            port=url.port,
+            path=url.path,
+            query=url.query,
+            fragment=url.fragment,
+        )
+
 
 @dataclass(frozen=True)
 class FileUrl:
@@ -141,8 +168,7 @@ class DataUrlData:
     - data: the actual data (may be empty)
     """
 
-    mediatype: str  # e.g., "text/plain", "image/png"
-    parameters: dict[str, str]  # e.g., {"charset": "UTF-8"}
+    media_type: MediaType  # e.g., "text/plain", "image/png"
     is_base64: bool
     data: str
 
@@ -200,9 +226,16 @@ class DataUrlData:
         if mediatype == "text/plain" and "charset" not in parameters:
             parameters["charset"] = "US-ASCII"
 
+        # NOTE: I can believe it's a valid media type
+        media_type = cast(
+            MediaType,
+            parse_media_type(
+                f"{mediatype}{''.join(f';{key}={value}' for key, value in parameters.items())}"
+            ),
+        )
+
         return DataUrlData(
-            mediatype=mediatype,
-            parameters=parameters,
+            media_type=media_type,
             is_base64=is_base64,
             data=data,
         )
@@ -211,8 +244,8 @@ class DataUrlData:
         if self.is_base64:
             data = base64.b64decode(self.data)
 
-            if self.mediatype.startswith("text/"):
-                charset = self.parameters["charset"]
+            if self.media_type.type == "text":
+                charset = self.media_type.parameters.get("charset", "US-ASCII")
                 data = data.decode(charset)
 
             return data

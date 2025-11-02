@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from browser.protocols.http.media_type import MediaType
+
 __all__ = (
     "Content",
     "ImageContent",
@@ -23,7 +25,7 @@ type Content = (
 @dataclass(frozen=True)
 class ImageContent:
     bytes: bytes
-    media_type: Literal["image/jpeg", "image/png", "image/gif"]
+    media_type: MediaType
 
 
 @dataclass(frozen=True)
@@ -35,7 +37,7 @@ class UnknownContent:
 @dataclass(frozen=True)
 class UnhandledContent:
     bytes: bytes
-    media_type: str
+    media_type: MediaType
 
 
 @dataclass(frozen=True)
@@ -55,11 +57,14 @@ class ViewSource:
     content: Content
 
 
-def recognize_content(media_type: str, data: bytes) -> Content:
+def recognize_content(media_type: MediaType, data: bytes) -> Content:
     match media_type:
-        case "text/html":
+        case MediaType(type="text", subtype="html"):
             return HtmlContent(data)
-        case "image/jpeg":
+        case MediaType(type="text", subtype="plain"):
+            charset = media_type.parameters.get("charset") or "iso-8859-1"
+            return PlainTextContent(text=data.decode(charset))
+        case MediaType(type="image", subtype="jpeg"):
             return ImageContent(media_type=media_type, bytes=data)
         case _:
             return UnhandledContent(media_type=media_type, bytes=data)

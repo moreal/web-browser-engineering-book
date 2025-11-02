@@ -17,8 +17,9 @@ class DataUrlHandler(UrlHandler):
         if isinstance(data, str):
             data = (
                 data.encode(charset)
-                if (charset := data_url.parameters.get("charset")) is not None
+                if (charset := data_url.media_type.parameters.get("charset"))
+                is not None
                 else data.encode()
             )
 
-        return recognize_content(data_url.mediatype, data)
+        return recognize_content(data_url.media_type, data)

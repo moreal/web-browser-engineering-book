@@ -1,7 +1,7 @@
 import abc
 from typing import override
 
-from .content import Content, HtmlContent, TextContent, ImageContent
+from .content import Content, HtmlContent, ImageContent, PlainTextContent, ViewSource
 
 
 class Renderer[Output = str](abc.ABC):
@@ -21,6 +21,33 @@ class ConsoleRenderer(Renderer[None]):
     def render(self, content: Content) -> None:
         match content:
             case HtmlContent():
-                print(content.text)
+                _render_html_console(content)
+            case ViewSource():
+                print("In view-source mode:")
+                print(_get_raw(content.content))
             case ImageContent():
                 print("image content is not supported yet.")
+            case PlainTextContent():
+                print(content.text)
+            case _:
+                print("unknown content type")
+
+
+def _get_raw(content: Content) -> str:
+    match content:
+        case HtmlContent():
+            return content.data.decode("utf-8")  # FIXME: get charset
+        case ImageContent():
+            return "Image: " + content.bytes.hex()
+        case PlainTextContent():
+            return content.text
+        case _:
+            return ""
+
+
+def _render_html_console(content: HtmlContent) -> None:
+    import re
+
+    data = content.data.decode("utf-8")  # FIXME: get charset
+    data = re.sub(r"<[^>]*>", "", data)  # Remove XML tags
+    print(data.replace("&lt;", "<").replace("&gt;", ">"))
