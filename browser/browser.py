@@ -1,13 +1,12 @@
-from typing import Literal
+import tkinter
+from dataclasses import dataclass
+from typing import Literal, assert_never
+
 from browser.content import Content, HtmlContent
 from browser.content_fetcher import fetch_content
 from browser.renderer import _render_html_to_text
 
 from .url import Url
-
-import tkinter
-
-from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -16,8 +15,13 @@ class BrowserOptions:
 
 
 Position = tuple[int, int]
-Element = tuple[Literal["text"], str] | tuple[Literal["box"], tuple[int, int]]
+TextElement = tuple[Literal["text"], str]
+BoxElement = tuple[Literal["box"], tuple[int, int]]
+Element = TextElement | BoxElement
 DisplayList = list[tuple[Position, Element]]
+
+
+HORIZONTAL_SCROLL_WIDTH = 10
 
 
 class Browser:
@@ -84,20 +88,36 @@ class Browser:
 
     def _update_display_list(self):
         assert self._current_content is not None
-        self._current_display_list = self._get_display_list(self._current_content)
+        display_list = self._get_display_list(self._current_content)
+        if (
+            vertical_scroll_bar := _get_vertical_scroll_bar(
+                display_list,
+                scroll=self.scroll,
+                width=self.width,
+                vstep=self.VSTEP,
+                height=self.height,
+            )
+        ) is not None:
+            display_list.append(vertical_scroll_bar)
+
+        self._current_display_list = display_list
         self._render()
 
     def _display(self, display_list: DisplayList):
         self.canvas.delete("all")
         for (x, y), element in display_list:
-            if y > self.scroll + self.height or y + self.VSTEP < self.scroll:
+            if y > self.scroll + self.height:
                 continue
             match element:
                 case ("text", text):
                     _ = self.canvas.create_text(x, y - self.scroll, text=text)
                 case ("box", (width, height)):
                     _ = self.canvas.create_rectangle(
-                        x, y - self.scroll, x + width, y - self.scroll + height
+                        x,
+                        y,
+                        x + width,
+                        y + height,
+                        fill="gray",
                     )
 
     def _get_display_list(self, content: Content) -> DisplayList:
@@ -116,8 +136,25 @@ class Browser:
 
                 return display_list
             case _:
-                pass
+                return []
 
 
 def _get_max_height(display_list: DisplayList, vstep: int) -> int:
     return max(map(lambda x: x[0][1], display_list)) + vstep
+
+
+def _get_vertical_scroll_bar(
+    display_list: DisplayList, *, scroll: int, width: int, height: int, vstep: int
+) -> tuple[Position, BoxElement] | None:
+    max_height = _get_max_height(display_list, vstep)
+
+    if max_height <= height:
+        return None
+
+    rate = height / max_height
+    vertical_scroll_length = int(height * rate)
+    scroll_y = int(scroll * rate)
+    return (width - HORIZONTAL_SCROLL_WIDTH, scroll_y), (
+        "box",
+        (HORIZONTAL_SCROLL_WIDTH, vertical_scroll_length),
+    )
