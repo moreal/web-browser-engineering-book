@@ -88,7 +88,9 @@ class Browser:
 
     def _update_display_list(self):
         assert self._current_content is not None
-        display_list = self._get_display_list(self._current_content)
+        display_list = _get_display_list(
+            self._current_content, width=self.width, hstep=self.HSTEP, vstep=self.VSTEP
+        )
         if (
             vertical_scroll_bar := _get_vertical_scroll_bar(
                 display_list,
@@ -120,24 +122,6 @@ class Browser:
                         fill="gray",
                     )
 
-    def _get_display_list(self, content: Content) -> DisplayList:
-        match content:
-            case HtmlContent():
-                text = _render_html_to_text(content)
-                display_list: DisplayList = []
-                cursor_x, cursor_y = self.HSTEP, self.VSTEP
-                for c in text:
-                    display_list.append(((cursor_x, cursor_y), ("text", c)))
-                    cursor_x += self.HSTEP
-
-                    if cursor_x >= self.width - self.HSTEP:
-                        cursor_x = self.HSTEP
-                        cursor_y += self.VSTEP
-
-                return display_list
-            case _:
-                return []
-
 
 def _get_max_height(display_list: DisplayList, vstep: int) -> int:
     return max(map(lambda x: x[0][1], display_list)) + vstep
@@ -158,3 +142,24 @@ def _get_vertical_scroll_bar(
         "box",
         (HORIZONTAL_SCROLL_WIDTH, vertical_scroll_length),
     )
+
+
+def _get_display_list(
+    content: Content, *, hstep: int, vstep: int, width: int
+) -> DisplayList:
+    match content:
+        case HtmlContent():
+            text = _render_html_to_text(content)
+            display_list: DisplayList = []
+            cursor_x, cursor_y = hstep, vstep
+            for c in text:
+                display_list.append(((cursor_x, cursor_y), ("text", c)))
+                cursor_x += hstep
+
+                if cursor_x >= width - hstep:
+                    cursor_x = hstep
+                    cursor_y += vstep
+
+            return display_list
+        case _:
+            return []
