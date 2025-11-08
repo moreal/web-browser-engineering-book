@@ -153,8 +153,12 @@ def _get_display_list(
             display_list: DisplayList = []
             cursor_x, cursor_y = hstep, vstep
             for c in text:
-                display_list.append(((cursor_x, cursor_y), ("text", c)))
-                cursor_x += hstep
+                if c == "\n":
+                    cursor_x = hstep
+                    cursor_y += vstep
+                else:
+                    display_list.append(((cursor_x, cursor_y), ("text", c)))
+                    cursor_x += hstep
 
                 if cursor_x >= width - hstep:
                     cursor_x = hstep
