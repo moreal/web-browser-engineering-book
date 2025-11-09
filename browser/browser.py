@@ -1,3 +1,4 @@
+import pathlib
 import tkinter
 from dataclasses import dataclass
 from typing import Literal, assert_never
@@ -17,7 +18,9 @@ class BrowserOptions:
 Position = tuple[int, int]
 TextElement = tuple[Literal["text"], str]
 BoxElement = tuple[Literal["box"], tuple[int, int]]
-Element = TextElement | BoxElement
+# "image", <path>, <size>
+ImageElement = tuple[Literal["image"], str, tuple[int, int]]
+Element = TextElement | BoxElement | ImageElement
 DisplayList = list[tuple[Position, Element]]
 
 
@@ -113,6 +116,12 @@ class Browser:
             match element:
                 case ("text", text):
                     _ = self.canvas.create_text(x, y - self.scroll, text=text)
+                case ("image", path, size):
+                    image = _load_image(path)
+
+                    _ = self.canvas.create_image(
+                        x, y - self.scroll, image=image, anchor="nw"
+                    )
                 case ("box", (width, height)):
                     _ = self.canvas.create_rectangle(
                         x,
@@ -144,6 +153,15 @@ def _get_vertical_scroll_bar(
     )
 
 
+_image_cache: dict[str, tkinter.PhotoImage] = {}
+
+
+def _load_image(path: str) -> tkinter.PhotoImage:
+    if path not in _image_cache:
+        _image_cache[path] = tkinter.PhotoImage(file=path)
+    return _image_cache[path]
+
+
 def _get_display_list(
     content: Content, *, hstep: int, vstep: int, width: int
 ) -> DisplayList:
@@ -152,12 +170,21 @@ def _get_display_list(
             text = _render_html_to_text(content)
             display_list: DisplayList = []
             cursor_x, cursor_y = hstep, vstep
-            for c in text:
+            iterator = _TextIterator(text)
+            for typ, c in iterator:
                 if c == "\n":
                     cursor_x = hstep
                     cursor_y += vstep
                 else:
-                    display_list.append(((cursor_x, cursor_y), ("text", c)))
+                    if typ == "emoji":
+                        display_list.append(
+                            (
+                                (cursor_x, cursor_y),
+                                ("image", str(_to_emoji_filepath(c)), (0, 0)),
+                            )
+                        )
+                    else:
+                        display_list.append(((cursor_x, cursor_y), ("text", c)))
                     cursor_x += hstep
 
                 if cursor_x >= width - hstep:
@@ -167,3 +194,44 @@ def _get_display_list(
             return display_list
         case _:
             return []
+
+
+_OPENMOJI_BASE_PATH = pathlib.Path("data/openmoji")
+
+
+# Make iterator receives string and
+class _TextIterator:
+    def __init__(self, text: str):
+        self.text = text
+        self.index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> tuple[Literal["text", "emoji"], str]:
+        if self.index >= len(self.text):
+            raise StopIteration
+
+        for i in range(10, 0, -1):
+            if _exist_emoji(self.text[self.index : self.index + i]):
+                char = self.text[self.index : self.index + i]
+                self.index += i
+                return ("emoji", char)
+
+        char = self.text[self.index]
+        self.index += 1
+        return ("text", char)
+
+
+def _to_emoji_filename(s: str) -> str:
+    return f"{'-'.join((hex(ord(c))[2:] for c in s))}.png"
+
+
+def _to_emoji_filepath(s: str) -> pathlib.Path:
+    return _OPENMOJI_BASE_PATH.joinpath(_to_emoji_filename(s)).absolute()
+
+
+def _exist_emoji(s: str) -> bool:
+    pathval = _to_emoji_filepath(s)
+    retval = pathval.exists()
+    return retval
