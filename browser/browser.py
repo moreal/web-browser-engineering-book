@@ -6,7 +6,7 @@ from browser.content import Content, HtmlContent
 from browser.content_fetcher import fetch_content
 from browser.renderer import _render_html_to_text
 
-from .url import Url
+from .url import AboutUrl, Url, UrlParseError
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ class Browser:
         self.scroll = max(min(self.scroll + delta, max_height - self.height), 0)
         self._update_display_list()
 
-    def open(self, url: Url) -> None:
+    def open(self, url: str | Url) -> None:
         self.update_content(fetch_content(url))
 
     def _render(self):

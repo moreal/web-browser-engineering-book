@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
 import re
-from typing import Literal, cast
+from dataclasses import dataclass
+from typing import Literal, Self, cast
 
 from browser.protocols.http.media_type import (
-    InvalidMediaType,
     MediaType,
     parse_media_type,
 )
@@ -19,17 +18,17 @@ QueryValueType = str | list[str]
 @dataclass(frozen=True)
 class Url:
     scheme: str
-    username: str | None
-    password: str | None
-    host: str | None
-    port: int | None
-    path: str | None
+    username: str | None = None
+    password: str | None = None
+    host: str | None = None
+    port: int | None = None
+    path: str | None = None
     # FIXME: it doens't parse query string (e.g., "key[]=a&key[3]=b")
-    query: str | None
-    fragment: str | None
+    query: str | None = None
+    fragment: str | None = None
 
-    @staticmethod
-    def parse(s: str) -> "Url":
+    @classmethod
+    def parse(cls, s: str) -> Self | UrlParseError:
         # RFC 3986 compliant URL regex pattern
         # URI = scheme ":" ["//" authority] path ["?" query] ["#" fragment]
         # authority = [userinfo "@"] host [":" port]
@@ -75,7 +74,7 @@ class Url:
 
         match = re.match(regex, s)
         if not match:
-            raise ValueError("Invalid URL")
+            return UrlParseError()
 
         scheme_value = match.group("scheme")
         username_value = match.group("username")
@@ -86,7 +85,7 @@ class Url:
         query_value = match.group("query")
         fragment_value = match.group("fragment")
 
-        return Url(
+        return cls(
             scheme=scheme_value,
             username=username_value,
             password=password_value,
@@ -125,12 +124,12 @@ class HttpFamilyUrl:
         )
 
     @classmethod
-    def from_url(cls, url: Url) -> HttpFamilyUrl:
+    def from_url(cls, url: Url) -> HttpFamilyUrl | UrlParseError:
         if not (url.scheme == "http" or url.scheme == "https"):
-            raise ValueError(f"Unexpected scheme: {url.scheme}")
+            return UrlParseError(f"Unexpected scheme: {url.scheme}")
 
         if url.host is None:
-            raise ValueError("Host is required for HTTP URL.")
+            return UrlParseError("Host is required for HTTP URL.")
 
         return cls(
             scheme=url.scheme,
@@ -251,3 +250,23 @@ class DataUrlData:
             return data
         else:
             return self.data
+
+
+class UrlParseError(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+@dataclass(frozen=True)
+class AboutUrl:
+    path: str
+
+    @classmethod
+    def from_url(cls, url: Url) -> AboutUrl | UrlParseError:
+        if url.scheme != "about" or url.path is None:
+            return UrlParseError()
+
+        return AboutUrl(path=url.path)
+
+    def to_url(self) -> Url:
+        return Url(scheme="about", path=self.path)

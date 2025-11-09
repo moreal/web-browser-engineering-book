@@ -1,29 +1,27 @@
 import dataclasses
-import re
 import os.path
+import re
+import time
 from dataclasses import dataclass
 from typing import cast, override
 
 from browser.cache import HttpCache
-from browser.protocols.http.media_type import InvalidMediaType
-from browser.singleton import GlobalMemoryCache
+from browser.connection import request_http
 from browser.content import (
     Content,
     UnknownContent,
     recognize_content,
 )
 from browser.handler import RedirectInfo, UrlHandler
+from browser.protocols.http.headers.cache_control import response as cache_control_token
 from browser.protocols.http.headers.cache_control.response import (
     parse_response_cache_control,
 )
-
-from browser.protocols.http.headers.cache_control import response as cache_control_token
+from browser.protocols.http.media_type import InvalidMediaType
 from browser.protocols.http.request import HttpRequest
 from browser.protocols.http.response import HttpResponse
-from browser.connection import request_http
+from browser.singleton import GlobalMemoryCache
 from browser.url import HttpFamilyUrl, Url
-
-import time
 
 __all__ = (
     "HttpHandler",
@@ -44,10 +42,16 @@ class HttpHandler(UrlHandler):
 
     @override
     def fetch(self, url: Url):
-        http_family_url = HttpFamilyUrl.from_url(url)
+        match http_family_url := HttpFamilyUrl.from_url(url):
+            case HttpFamilyUrl():
+                return self._fetch(http_family_url)
+            case _:
+                return RedirectInfo(url="about:blank")
+
+    def _fetch(self, http_family_url: HttpFamilyUrl):
         request = HttpRequest(
             method="GET",
-            path=url.path or "/",
+            path=http_family_url.path or "/",
             headers={
                 "Host": http_family_url.host,
                 "Connection": "keep-alive" if HTTP_KEEP_ALIVE_FLAG else "close",
@@ -84,8 +88,7 @@ class HttpHandler(UrlHandler):
             and (location_header_value := response.headers.get("location")) is not None
         ):
             if re.match(r"^[^:/]+://", location_header_value):
-                redirect_url = Url.parse(location_header_value)
-                return RedirectInfo(url=redirect_url)
+                return RedirectInfo(url=location_header_value)
             else:
                 # FIXME: resolve relative path via URL.resolve
                 next_path = os.path.join(
@@ -93,6 +96,7 @@ class HttpHandler(UrlHandler):
                 )
                 redirect_url = dataclasses.replace(http_family_url, path=next_path)
                 return RedirectInfo(url=redirect_url.to_url())
+
         return recognize_response(response)
 
 

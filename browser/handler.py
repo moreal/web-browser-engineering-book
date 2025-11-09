@@ -7,7 +7,7 @@ from browser.url import Url
 
 @dataclass(frozen=True)
 class RedirectInfo:
-    url: Url
+    url: str | Url
 
 
 class UrlHandler(abc.ABC):
