@@ -13,6 +13,7 @@ app = typer.Typer()
 def main(
     url: Annotated[str, typer.Argument(help="URL to open.")],
 ):
+    # browser = Browser(rtl=True)
     browser = Browser()
     browser.open(url)
 

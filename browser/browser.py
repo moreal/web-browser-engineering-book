@@ -28,13 +28,10 @@ HORIZONTAL_SCROLL_WIDTH = 10
 
 
 class Browser:
-    def __init__(
-        self,
-        height: int = 800,
-        width: int = 600,
-    ) -> None:
+    def __init__(self, height: int = 800, width: int = 600, rtl: bool = False) -> None:
         self.height = height
         self.width = width
+        self.rtl = rtl
         self.HSTEP, self.VSTEP = 13, 18
 
         self.window = tkinter.Tk()
@@ -92,7 +89,11 @@ class Browser:
     def _update_display_list(self):
         assert self._current_content is not None
         display_list = _get_display_list(
-            self._current_content, width=self.width, hstep=self.HSTEP, vstep=self.VSTEP
+            self._current_content,
+            width=self.width,
+            hstep=self.HSTEP,
+            vstep=self.VSTEP,
+            rtl=self.rtl,
         )
         if (
             vertical_scroll_bar := _get_vertical_scroll_bar(
@@ -163,17 +164,20 @@ def _load_image(path: str) -> tkinter.PhotoImage:
 
 
 def _get_display_list(
-    content: Content, *, hstep: int, vstep: int, width: int
+    content: Content, *, hstep: int, vstep: int, width: int, rtl: bool = False
 ) -> DisplayList:
     match content:
         case HtmlContent():
             text = _render_html_to_text(content)
             display_list: DisplayList = []
-            cursor_x, cursor_y = hstep, vstep
+            cursor_x, cursor_y = (hstep, 0) if rtl else (width - hstep, 0)
             iterator = _TextIterator(text)
             for typ, c in iterator:
                 if c == "\n":
-                    cursor_x = hstep
+                    if rtl:
+                        cursor_x = width - hstep
+                    else:
+                        cursor_x = hstep
                     cursor_y += vstep
                 else:
                     if typ == "emoji":
@@ -185,10 +189,12 @@ def _get_display_list(
                         )
                     else:
                         display_list.append(((cursor_x, cursor_y), ("text", c)))
-                    cursor_x += hstep
+                    cursor_x += hstep if not rtl else -hstep
 
-                if cursor_x >= width - hstep:
-                    cursor_x = hstep
+                if (not rtl and cursor_x >= width - hstep) or (
+                    rtl and cursor_x < hstep
+                ):
+                    cursor_x = hstep if not rtl else width - hstep
                     cursor_y += vstep
 
             return display_list
